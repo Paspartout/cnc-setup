@@ -37,7 +37,7 @@ append_unique() {
 	grep -q -F "$*" "$f" || echo "$*" >>"$f"
 }
 
-taskdir=$PWD/.tasks
+taskdir=$PWD/.ttb_tasks
 mark_done() {
 	touch $taskdir/$1
 }
@@ -72,6 +72,10 @@ ask_yes_no() {
 		n) false ;;
 		*) false ;;
 	esac
+}
+
+as_user() {
+	sudo -u $SUDO_USER $*
 }
 
 # tasks
@@ -124,11 +128,17 @@ git_setup() {
 		apt-get -y install git ssh
 
 		msg "Generating SSH Key..."
-		sudo -u $SUDO_USER ssh-keygen
+		as_user ssh-keygen
+		msg "Your ssh key is at ~/.ssh/id_rsa.pub"
 
-		msg "Your ssh key is at ~/id_rsa.pub"
-		ask_yes_no "Add SSH key to github now?" && \
-		sudo -u $SUDO_USER xdg-open "https://github.com/settings/ssh"
+		if ask_yes_no "Add SSH key to github now?" ; then
+			msg "NOTE: Close Browser after you're done!"
+			sleep 2
+			msg "Your public key to copy and paste: "
+			as_user cat ~/.ssh/id_rsa.pub
+			sleep 2
+			as_user xdg-open "https://github.com/settings/ssh"
+		fi
 
 		msg "Configuring git..."
 		echo -n "Git Author(Full Name): "
@@ -137,8 +147,9 @@ git_setup() {
 		echo -n "Git Author Email: "
 		IFS= read -r email
 
+		# FIXME: as_user doesnt work because of " surrounding $author
 		sudo -u $SUDO_USER git config --global user.name "$author"
-		sudo -u $SUDO_USER git config --global user.email "$email"
+		as_user git config --global user.email $email
 	fi
 }
 
@@ -146,9 +157,9 @@ clone_git_repos() {
 	msg "Cloning repos \"$repos\" into ${workspace_src}..."
 	
 	# FIXME: temporary branches and repos
-	git clone -b asp-integration ${github_url}/cnc-turtlebots "${workspace_src}/cnc-turtlebot"
-	git clone ${github_url}/symrock "${workspace_src}/symrock"
-	git clone ${github_url}/clingo_cpp"${workspace_src}/clingo_cpp"
+	git clone -b asp-integration ${github_url}cnc-turtlebots "${workspace_src}/cnc-turtlebot"
+	git clone ${github_url}symrock "${workspace_src}/symrock"
+	git clone ${github_url}clingo_cpp "${workspace_src}/clingo_cpp"
 	git clone https://github.com/StephanOpfer/turtlebot "${workspace_src}/turtlebot"
 	branch=kinetic
 
@@ -190,6 +201,9 @@ setup_bashrc() {
 	
 	append_bashrc "# Fancy prompt that also shows the current branch"
 	append_bashrc "export PS1='\[\033[01;32m\]\u@\h\[\033[01;34m\] \w \[\033[01;31m\]\$(__git_ps1 \"[%s]\")\[\033[01;34m\]\$\[\033[00m\] '"
+
+	# The only way to break a habit
+	append_bashrc "alias catkin_make='catkin build'"
 }
 
 # This portion of the script has to be run as root
