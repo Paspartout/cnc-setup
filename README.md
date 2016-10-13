@@ -29,9 +29,11 @@ Usage:
 Notes/Issues
 ------------
 
-At the moment it seems, that the packages from ttb-setup.sh and msl-setup.sh
-are mutually exclusive. Running msl-setup.sh after running ttb-setup.sh
-seems to remove packages needed for the turtlebots.
+It is highly recommended to update your system before running the script
+by `sudo apt-get update && sudo apt-get upgrade`.
+
+The script won't build the workspace because you might want to call catkin
+with parameters for your ide(e.g. eclipse).
 
 License
 -------
